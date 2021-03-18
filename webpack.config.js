@@ -3,28 +3,32 @@ const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
+
 const indexHtmlPluginOptions = {
   template: './src/index.ejs',
   appMountId: 'react-weather',
   pathPrefix: '/',
-  inject: true,
+  inject: false,
   hash: true,
 }
 
+const ENV = process.env.NODE_ENV || 'production'
+const isDev = ENV === 'development'
+
 const config = {
-  mode: 'development',
-  devtool: 'eval-source-map',
+  mode: ENV,
+  devtool: isDev ? 'eval-source-map' : 'source-map',
   entry: ['./src/index.js'],
   output: {
-    filename: 'bundle.js',
-    sourceMapFilename: 'bundle.js.map',
-    path: path.resolve(__dirname, 'dist'),
-    publicPath: `http://localhost:8080/`,
+    filename: '[contenthash].[name].js',
+    sourceMapFilename: '[contenthash].[name].map[query]',
+    path: path.resolve('dist'),
+    publicPath: '/',
   },
   resolve: {
     modules: [path.resolve('./src'), path.resolve('node_modules')],
     alias: {
-      '@': path.resolve(__dirname, 'src/')
+      '@': path.resolve(__dirname, './src')
     }
   },
   module: {
@@ -36,7 +40,7 @@ const config = {
           loader: 'babel-loader',
           options: {
             plugins: [
-              process.env.NODE_ENV === 'development' && require.resolve('react-refresh/babel'),
+              isDev && require.resolve('react-refresh/babel'),
             ].filter(Boolean),
           },
         },
@@ -46,10 +50,18 @@ const config = {
   },
   plugins: [
     new HtmlWebpackPlugin(indexHtmlPluginOptions),
-    // new webpack.HotModuleReplacementPlugin(),
-    new ReactRefreshWebpackPlugin(),
-  ],
-  devServer: {
+    // isDev && new webpack.HotModuleReplacementPlugin(),
+    isDev && new ReactRefreshWebpackPlugin(),
+  ].filter(Boolean),
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+    },
+  },
+}
+
+if (isDev) {
+  config.devServer = {
     host: '127.0.0.1',
     port: 8080,
     historyApiFallback: true,
@@ -62,7 +74,7 @@ const config = {
     },
     contentBase: path.join(__dirname, 'dist'),
     hot: true,
-  },
+  }
 }
 
 module.exports = config
